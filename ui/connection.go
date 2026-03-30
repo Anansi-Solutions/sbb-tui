@@ -82,7 +82,8 @@ func (m appModel) renderJourneySection(section model.Section, width, labelCol, p
 	const timeCol = 5
 	const symbolCol = 5
 
-	depTime := section.Departure.Scheduled.Local().Format("15:04")
+	depTime := section.Departure.Scheduled.Swiss().Format("15:04")
+	depAnnotation := localTimeAnnotation(section.Departure.Scheduled)
 	depDelay := section.Departure.Delay
 	depStation := section.Departure.Station.Name
 	depPlatform := section.Departure.Platform
@@ -92,7 +93,7 @@ func (m appModel) renderJourneySection(section model.Section, width, labelCol, p
 		depDot = m.icons.filledDot
 	}
 
-	depLine := m.formatStationLine(depTime, depDot, depStation, depPlatform, width, timeCol, symbolCol, labelCol, platformCol, true)
+	depLine := m.formatStationLine(depTime, depDot, depStation, depPlatform, depAnnotation, width, timeCol, symbolCol, labelCol, platformCol, true)
 	lines = append(lines, depLine)
 
 	indent := strings.Repeat(" ", timeCol)
@@ -116,7 +117,8 @@ func (m appModel) renderJourneySection(section model.Section, width, labelCol, p
 
 	lines = append(lines, spacingLine)
 
-	arrTime := section.Arrival.Scheduled.Local().Format("15:04")
+	arrTime := section.Arrival.Scheduled.Swiss().Format("15:04")
+	arrAnnotation := localTimeAnnotation(section.Arrival.Scheduled)
 	arrDelay := section.Arrival.Delay
 	arrStation := section.Arrival.Station.Name
 	arrPlatform := section.Arrival.Platform
@@ -126,7 +128,7 @@ func (m appModel) renderJourneySection(section model.Section, width, labelCol, p
 		arrSymbol = m.icons.filledDot
 	}
 
-	arrLine := m.formatStationLine(arrTime, arrSymbol, arrStation, arrPlatform, width, timeCol, symbolCol, labelCol, platformCol, false)
+	arrLine := m.formatStationLine(arrTime, arrSymbol, arrStation, arrPlatform, arrAnnotation, width, timeCol, symbolCol, labelCol, platformCol, false)
 	lines = append(lines, arrLine)
 
 	if arrDelay > 0 {
@@ -176,7 +178,7 @@ func (m appModel) renderWalkSection(section model.Section) []string {
 	return lines
 }
 
-func (m appModel) formatStationLine(timeStr, symbol, station, platform string, width, timeCol, symbolCol, labelCol, platformCol int, bold bool) string {
+func (m appModel) formatStationLine(timeStr, symbol, station, platform, annotation string, width, timeCol, symbolCol, labelCol, platformCol int, bold bool) string {
 	textStyle := m.styles.text
 	if bold {
 		textStyle = m.styles.bold
@@ -195,11 +197,16 @@ func (m appModel) formatStationLine(timeStr, symbol, station, platform string, w
 		platformPart = labelPart + " " + valuePart
 	}
 
+	annotationWidth := 0
+	if annotation != "" {
+		annotationWidth = 2 + len([]rune(annotation)) // 2 leading spaces (added below) + len("(HH:MM)")
+	}
+
 	fixedWidth := timeCol + symbolCol
 	if platformCol > 0 {
 		fixedWidth += platformCol
 	}
-	availableForStation := max(width-fixedWidth-1, 5)
+	availableForStation := max(width-fixedWidth-1-annotationWidth, 5)
 
 	truncatedStation := truncateString(station, availableForStation)
 	stationPart := textStyle.Render(truncatedStation)
@@ -207,11 +214,16 @@ func (m appModel) formatStationLine(timeStr, symbol, station, platform string, w
 	stationLen := len([]rune(truncatedStation))
 	padding := max(availableForStation-stationLen, 1)
 
-	if platformPart != "" {
-		return fmt.Sprintf("%s%s%s%s%s",
-			timePart, symbolPart, stationPart, strings.Repeat(" ", padding), platformPart)
+	annotationPart := ""
+	if annotation != "" {
+		annotationPart = "  " + m.styles.ghostText.Render(annotation)
 	}
-	return fmt.Sprintf("%s%s%s", timePart, symbolPart, stationPart)
+
+	if platformPart != "" {
+		return fmt.Sprintf("%s%s%s%s%s%s",
+			timePart, symbolPart, stationPart, strings.Repeat(" ", padding), platformPart, annotationPart)
+	}
+	return fmt.Sprintf("%s%s%s%s", timePart, symbolPart, stationPart, annotationPart)
 }
 
 func truncateString(s string, maxLen int) string {
@@ -255,10 +267,16 @@ func (m appModel) renderSimpleConnection(c model.Connection, index int, width in
 	company := m.styles.company.Render(c.Sections[firstVehicle].Journey.Operator)
 	endStop := m.styles.text.Render(c.Sections[firstVehicle].Journey.To)
 
-	dep := c.Sections[firstVehicle].Departure.Scheduled.Local().Format("15:04")
-	arr := c.To.Arrival.Local().Format("15:04")
+	dep := c.Sections[firstVehicle].Departure.Scheduled.Swiss().Format("15:04")
+	arr := c.To.Arrival.Swiss().Format("15:04")
 	departure := m.styles.bold.Render(dep)
 	arrival := m.styles.bold.Render(arr)
+	if a := localTimeAnnotation(c.Sections[firstVehicle].Departure.Scheduled); a != "" {
+		departure += " " + m.styles.ghostText.Render(a)
+	}
+	if a := localTimeAnnotation(c.To.Arrival); a != "" {
+		arrival += " " + m.styles.ghostText.Render(a)
+	}
 
 	departureDelay := m.formatDelay(c.Sections[firstVehicle].Departure.Delay)
 	arrivalDelay := m.formatDelay(c.Sections[lastVehicle].Arrival.Delay)
@@ -340,6 +358,18 @@ func (m appModel) formatDelay(delay int) string {
 		return m.styles.warningBold.Render(fmt.Sprintf(" +%d", delay))
 	}
 	return ""
+}
+
+// localTimeAnnotation returns "(HH:MM)" for the local time when it differs
+// from the Swiss time, or an empty string when they are identical (i.e. the
+// user is already in the CET/CEST timezone).
+func localTimeAnnotation(t model.Timestamp) string {
+	swiss := t.Swiss().Format("15:04")
+	local := t.Time.Local().Format("15:04")
+	if local == swiss {
+		return ""
+	}
+	return "(" + local + ")"
 }
 
 func (m appModel) renderStopsLine(c model.Connection, totalWidth int) string {

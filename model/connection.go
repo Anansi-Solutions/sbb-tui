@@ -7,7 +7,9 @@ import (
 )
 
 // SwissLocation is the time zone for Switzerland (CET/CEST, Europe/Zurich).
-// Falls back to a fixed UTC+1 offset if the timezone database is unavailable.
+// main.go imports _ "time/tzdata" so the embedded TZ database is always
+// available; the fixed-offset fallback is a last-resort safety net only and
+// does not handle the CET↔CEST daylight-saving transition.
 var SwissLocation = func() *time.Location {
 	loc, err := time.LoadLocation("Europe/Zurich")
 	if err != nil {
