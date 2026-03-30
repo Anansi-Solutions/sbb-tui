@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+// SwissLocation is the time zone for Switzerland (CET/CEST, Europe/Zurich).
+// Falls back to a fixed UTC+1 offset if the timezone database is unavailable.
+var SwissLocation = func() *time.Location {
+	loc, err := time.LoadLocation("Europe/Zurich")
+	if err != nil {
+		loc = time.FixedZone("CET", 1*60*60)
+	}
+	return loc
+}()
+
 // Timestamp wraps time.Time with custom JSON unmarshaling for the SBB API
 // date format (2006-01-02T15:04:05-0700).
 type Timestamp struct {
@@ -15,6 +25,11 @@ type Timestamp struct {
 // Sub returns the duration between two Timestamps.
 func (t Timestamp) Sub(other Timestamp) time.Duration {
 	return t.Time.Sub(other.Time)
+}
+
+// Swiss returns the timestamp in Swiss time (CET/CEST, Europe/Zurich).
+func (t Timestamp) Swiss() time.Time {
+	return t.Time.In(SwissLocation)
 }
 
 // UnmarshalJSON parses the SBB API date format into a Timestamp.
