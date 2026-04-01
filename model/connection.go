@@ -29,8 +29,9 @@ func (t Timestamp) Sub(other Timestamp) time.Duration {
 	return t.Time.Sub(other.Time)
 }
 
-// Swiss returns the timestamp in Swiss time (CET/CEST, Europe/Zurich).
-func (t Timestamp) Swiss() time.Time {
+// Local overrides time.Time.Local() to return the timestamp in Swiss time
+// (CET/CEST, Europe/Zurich) instead of the system's local timezone.
+func (t Timestamp) Local() time.Time {
 	return t.Time.In(SwissLocation)
 }
 

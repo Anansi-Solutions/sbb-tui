@@ -82,7 +82,7 @@ func (m appModel) renderJourneySection(section model.Section, width, labelCol, p
 	const timeCol = 5
 	const symbolCol = 5
 
-	depTime := section.Departure.Scheduled.Swiss().Format("15:04")
+	depTime := section.Departure.Scheduled.Local().Format("15:04")
 	depDelay := section.Departure.Delay
 	depStation := section.Departure.Station.Name
 	depPlatform := section.Departure.Platform
@@ -116,7 +116,7 @@ func (m appModel) renderJourneySection(section model.Section, width, labelCol, p
 
 	lines = append(lines, spacingLine)
 
-	arrTime := section.Arrival.Scheduled.Swiss().Format("15:04")
+	arrTime := section.Arrival.Scheduled.Local().Format("15:04")
 	arrDelay := section.Arrival.Delay
 	arrStation := section.Arrival.Station.Name
 	arrPlatform := section.Arrival.Platform
@@ -255,8 +255,8 @@ func (m appModel) renderSimpleConnection(c model.Connection, index int, width in
 	company := m.styles.company.Render(c.Sections[firstVehicle].Journey.Operator)
 	endStop := m.styles.text.Render(c.Sections[firstVehicle].Journey.To)
 
-	dep := c.Sections[firstVehicle].Departure.Scheduled.Swiss().Format("15:04")
-	arr := c.To.Arrival.Swiss().Format("15:04")
+	dep := c.Sections[firstVehicle].Departure.Scheduled.Local().Format("15:04")
+	arr := c.To.Arrival.Local().Format("15:04")
 	departure := m.styles.bold.Render(dep)
 	arrival := m.styles.bold.Render(arr)
 
