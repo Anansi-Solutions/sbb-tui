@@ -226,7 +226,7 @@ func (m appModel) renderStartScreen() string {
 	}
 	logo = strings.TrimRight(logo, "\n")
 
-	coloredLogo := m.styles.logo.Render(logo)
+	coloredLogo := m.renderLogo(logo)
 
 	text := m.styles.textMuted.Render("Enter stations above to see timetables")
 

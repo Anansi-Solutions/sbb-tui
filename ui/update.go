@@ -172,6 +172,9 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case versionCheckMsg:
 		m.newerVersion = msg.newerVersion
 		return m, nil
+
+	case animationTickMsg:
+		return m, m.anim.Tick()
 	}
 
 	cmd := m.updateInputs(msg)

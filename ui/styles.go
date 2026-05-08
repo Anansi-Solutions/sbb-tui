@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucasb-eyer/go-colorful"
 
 	"github.com/necrom4/sbb-tui/config"
 )
@@ -38,6 +39,7 @@ type styles struct {
 	company        lipgloss.Style
 	logo           lipgloss.Style
 	bold           lipgloss.Style
+	logoBase       colorful.Color
 }
 
 func newStyles(theme config.Theme) styles {
@@ -89,5 +91,32 @@ func newStyles(theme config.Theme) styles {
 		bold: lipgloss.NewStyle().
 			Foreground(lipgloss.Color(theme.Text)).
 			Bold(true),
+		logoBase: parseColor(theme.Logo),
 	}
+}
+
+// parseColor converts a theme color string (hex or named) to a colorful.Color.
+func parseColor(s string) colorful.Color {
+	if c, err := colorful.Hex(s); err == nil {
+		return c
+	}
+	switch s {
+	case "white":
+		return colorful.Color{R: 1, G: 1, B: 1}
+	case "black":
+		return colorful.Color{R: 0, G: 0, B: 0}
+	case "red":
+		return colorful.Color{R: 1, G: 0, B: 0}
+	case "green":
+		return colorful.Color{R: 0, G: 1, B: 0}
+	case "blue":
+		return colorful.Color{R: 0, G: 0, B: 1}
+	case "yellow":
+		return colorful.Color{R: 1, G: 1, B: 0}
+	case "cyan":
+		return colorful.Color{R: 0, G: 1, B: 1}
+	case "magenta":
+		return colorful.Color{R: 1, G: 0, B: 1}
+	}
+	return colorful.Color{R: 1, G: 1, B: 1}
 }
