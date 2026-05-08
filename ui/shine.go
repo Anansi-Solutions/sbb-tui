@@ -145,26 +145,20 @@ type paletteCell struct {
 }
 
 // buildShinePalette generates color steps from base (factor=0) to the
-// shine peak (factor=1). The peak goes lighter or darker than the
-// base depending on the base's relative luminance.
+// shine peak (factor=1). The peak is produced by blending the base
+// toward black or white in Lab space, which naturally desaturates as
+// it darkens/brightens. This avoids HSL's tendency to reveal a
+// saturated hue when shifting the lightness of a near-neutral color
+// (e.g. shining #E9F7EF would otherwise pull a vivid green band).
 func buildShinePalette(base colorful.Color) shinePalette {
 	var p shinePalette
-	bh, bs, bl := base.Hsl()
-	// +1 → brighten; -1 → darken.
-	sign := 1.0
+	target := colorful.Color{R: 1, G: 1, B: 1}
 	if relLuminance(base) >= shineLumaPivot {
-		sign = -1.0
+		target = colorful.Color{R: 0, G: 0, B: 0}
 	}
 	for i := 0; i < shinePaletteLen; i++ {
 		f := float64(i) / float64(shinePaletteLen-1)
-		l := bl + sign*f*shineDelta
-		if l < 0 {
-			l = 0
-		}
-		if l > 1 {
-			l = 1
-		}
-		c := colorful.Hsl(bh, bs, l)
+		c := base.BlendLab(target, f*shineDelta)
 		hex := c.Clamped().Hex()
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(hex))
 		const sentinel = "\x00"
