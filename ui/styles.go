@@ -40,6 +40,7 @@ type styles struct {
 	logo           lipgloss.Style
 	bold           lipgloss.Style
 	logoBase       colorful.Color
+	textMutedBase  colorful.Color
 }
 
 func newStyles(theme config.Theme) styles {
@@ -91,7 +92,8 @@ func newStyles(theme config.Theme) styles {
 		bold: lipgloss.NewStyle().
 			Foreground(lipgloss.Color(theme.Text)).
 			Bold(true),
-		logoBase: parseColor(theme.Logo),
+		logoBase:      parseColor(theme.Logo),
+		textMutedBase: parseColor(theme.TextMuted),
 	}
 }
 

@@ -158,7 +158,10 @@ func NewModel(cfg config.Config) appModel {
 func (m appModel) Init() tea.Cmd {
 	cmds := []tea.Cmd{textinput.Blink, checkVersionCmd(m.currentVersion)}
 	if m.animations {
-		cmds = append(cmds, m.anim.Start(animLogoShine, logoShineDuration))
+		cmds = append(cmds,
+			m.anim.Start(animLogoShine, logoShineDuration),
+			m.anim.Start(animTextShine, textShineDuration),
+		)
 	}
 	return tea.Batch(cmds...)
 }

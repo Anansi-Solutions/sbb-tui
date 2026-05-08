@@ -187,8 +187,11 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.animations || !m.onStartScreen() {
 			return m, nil
 		}
-		if msg.name == animLogoShine {
+		switch msg.name {
+		case animLogoShine:
 			return m, m.anim.Start(animLogoShine, logoShineDuration)
+		case animTextShine:
+			return m, m.anim.Start(animTextShine, textShineDuration)
 		}
 		return m, nil
 	}

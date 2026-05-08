@@ -232,7 +232,7 @@ func (m appModel) renderStartScreen() string {
 
 	coloredLogo := m.renderLogo(logo)
 
-	text := m.styles.textMuted.Render("Enter stations above to see timetables")
+	text := m.renderStartTagline("Enter stations above to see timetables")
 
 	block := lipgloss.JoinVertical(lipgloss.Center, text, "", coloredLogo)
 

@@ -10,14 +10,19 @@ import (
 	"github.com/lucasb-eyer/go-colorful"
 )
 
-const animLogoShine = "logoShine"
+const (
+	animLogoShine = "logoShine"
+	animTextShine = "textShine"
+)
 
 const (
 	logoShineDuration  = 800 * time.Millisecond
+	textShineDuration  = 1200 * time.Millisecond
 	shineRepeatGap     = 2 * time.Second
 	shineDelta         = 0.30 // max lightness shift at the band's center (0..1)
 	shinePaletteLen    = 65   // pre-built color steps; higher = smoother
 	logoShineBandWidth = 28.0
+	textShineBandWidth = 8.0
 
 	// shineLumaPivot is the perceptual-luminance threshold above which
 	// the shine band darkens the base color, and below which it
@@ -203,5 +208,21 @@ func (m appModel) renderLogo(logo string) string {
 		progress:  progress,
 		bandWidth: logoShineBandWidth,
 		direction: shineDiagonal,
+	})
+}
+
+func (m appModel) renderStartTagline(text string) string {
+	if !m.animations {
+		return m.styles.textMuted.Render(text)
+	}
+	progress, active := m.anim.Progress(animTextShine)
+	if !active {
+		return m.styles.textMuted.Render(text)
+	}
+	return applyShine(text, shineOpts{
+		base:      m.styles.textMutedBase,
+		progress:  progress,
+		bandWidth: textShineBandWidth,
+		direction: shineHorizontal,
 	})
 }
