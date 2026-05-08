@@ -222,6 +222,9 @@ func (m appModel) renderStartTagline(text string) string {
 	if !m.animations {
 		return m.styles.textMuted.Render(text)
 	}
+	if progress, active := m.anim.Progress(animTaglineBuild); active {
+		return renderTaglineBuild(text, m.styles.textMutedBase, progress)
+	}
 	progress, active := m.anim.Progress(animTextShine)
 	if !active {
 		return m.styles.textMuted.Render(text)

@@ -158,9 +158,12 @@ func NewModel(cfg config.Config) appModel {
 func (m appModel) Init() tea.Cmd {
 	cmds := []tea.Cmd{textinput.Blink, checkVersionCmd(m.currentVersion)}
 	if m.animations {
-		// The logo build runs first; the shines kick in when it
-		// finishes (see animationTickMsg handler in update.go).
-		cmds = append(cmds, m.anim.Start(animLogoBuild, logoBuildDuration))
+		// The logo and tagline builds run first; the shines kick in
+		// when they finish (see animationTickMsg handler in update.go).
+		cmds = append(cmds,
+			m.anim.Start(animLogoBuild, logoBuildDuration),
+			m.anim.Start(animTaglineBuild, logoBuildDuration),
+		)
 	}
 	return tea.Batch(cmds...)
 }
