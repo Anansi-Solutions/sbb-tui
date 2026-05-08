@@ -16,8 +16,7 @@ const (
 )
 
 const (
-	logoShineDuration  = 800 * time.Millisecond
-	textShineDuration  = 1200 * time.Millisecond
+	shineDuration      = 800 * time.Millisecond
 	shineRepeatGap     = 2 * time.Second
 	shineDelta         = 0.30 // max lightness shift at the band's center (0..1)
 	shinePaletteLen    = 65   // pre-built color steps; higher = smoother
@@ -32,14 +31,25 @@ const (
 	shineLumaPivot = 0.6
 )
 
-type shineRestartMsg struct {
-	name string
+type shineRestartMsg struct{}
+
+func shineRestartCmd() tea.Cmd {
+	return tea.Tick(shineRepeatGap, func(time.Time) tea.Msg {
+		return shineRestartMsg{}
+	})
 }
 
-func shineRestartCmd(name string) tea.Cmd {
-	return tea.Tick(shineRepeatGap, func(time.Time) tea.Msg {
-		return shineRestartMsg{name: name}
-	})
+// shineCycleFinished reports whether the finished slice contains a
+// shine-cycle animation. Both shines share the same duration so they
+// complete on the same tick; firing the restart on either one is
+// enough.
+func shineCycleFinished(finished []string) bool {
+	for _, name := range finished {
+		if name == animLogoShine || name == animTextShine {
+			return true
+		}
+	}
+	return false
 }
 
 // shineDirection is the axis along which the band sweeps.
