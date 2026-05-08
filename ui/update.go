@@ -49,7 +49,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.connections = nil
 			m.errorMsg = nil
 			m.searched = true
-			return m, m.searchCmd()
+			return m, tea.Batch(m.searchCmd(), m.startLoadingCmd())
 
 		case " ":
 			active := m.headerOrder[m.tabIndex]
@@ -72,7 +72,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.connections = nil
 				m.errorMsg = nil
 				m.searched = true
-				return m, m.searchCmd()
+				return m, tea.Batch(m.searchCmd(), m.startLoadingCmd())
 			}
 
 		case "tab", "shift+tab":
@@ -157,6 +157,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case dataMsg:
 		m.loading = false
+		m.anim.Stop(animLoading)
 		if msg.err != nil {
 			m.errorMsg = fmt.Errorf("failed to fetch connections: %w", msg.err)
 			return m, nil

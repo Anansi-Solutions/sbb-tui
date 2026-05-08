@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"math"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -37,6 +38,28 @@ func (a *animator) Start(name string, duration time.Duration) tea.Cmd {
 		duration: duration,
 	}
 	return animationTickCmd()
+}
+
+// StartIndefinite (re)starts a named animation that never auto-finishes.
+// Callers must explicitly Stop it when no longer needed.
+func (a *animator) StartIndefinite(name string) tea.Cmd {
+	return a.Start(name, math.MaxInt64)
+}
+
+// Stop marks a named animation as finished without firing a completion event.
+func (a *animator) Stop(name string) {
+	if an, ok := a.anims[name]; ok {
+		an.done = true
+	}
+}
+
+// Elapsed returns the time since a named animation started and whether it is currently running.
+func (a animator) Elapsed(name string) (time.Duration, bool) {
+	an, ok := a.anims[name]
+	if !ok || an.done {
+		return 0, false
+	}
+	return time.Since(an.start), true
 }
 
 // Tick advances all animations. It returns the names of animations

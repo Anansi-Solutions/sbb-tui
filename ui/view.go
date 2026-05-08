@@ -195,7 +195,7 @@ func (m appModel) renderHeaderItem(idx int) string {
 
 func (m appModel) renderResults() string {
 	if m.loading {
-		return "\n  Searching connections..."
+		return m.renderLoading()
 	}
 
 	if m.errorMsg != nil {
