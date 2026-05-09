@@ -76,6 +76,8 @@ type appModel struct {
 	suggestSeq     [2]int
 	currentVersion string
 	newerVersion   string
+	animations     bool
+	anim           animator
 }
 
 // NewModel creates the initial Bubbletea model from the application config.
@@ -96,6 +98,8 @@ func NewModel(cfg config.Config) appModel {
 		nerdFont:       cfg.NerdFont,
 		isArrivalTime:  cfg.IsArrivalTime,
 		currentVersion: cfg.CurrentVersion,
+		animations:     cfg.Animations,
+		anim:           newAnimator(),
 	}
 
 	now := time.Now()
@@ -152,7 +156,14 @@ func NewModel(cfg config.Config) appModel {
 
 // Init implements tea.Model.
 func (m appModel) Init() tea.Cmd {
-	return tea.Batch(textinput.Blink, checkVersionCmd(m.currentVersion))
+	cmds := []tea.Cmd{textinput.Blink, checkVersionCmd(m.currentVersion)}
+	if m.animations {
+		// The logo build runs first; the tagline build starts when
+		// it finishes, and the shines kick in when the tagline build
+		// finishes (see animationTickMsg handler in update.go).
+		cmds = append(cmds, m.anim.Start(animLogoBuild, logoBuildDuration))
+	}
+	return tea.Batch(cmds...)
 }
 
 func checkVersionCmd(current string) tea.Cmd {

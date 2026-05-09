@@ -195,7 +195,7 @@ func (m appModel) renderHeaderItem(idx int) string {
 
 func (m appModel) renderResults() string {
 	if m.loading {
-		return "\n  Searching connections..."
+		return m.renderLoading()
 	}
 
 	if m.errorMsg != nil {
@@ -219,6 +219,10 @@ func (m appModel) renderResults() string {
 	return lipgloss.JoinVertical(lipgloss.Left, boxes...)
 }
 
+func (m appModel) onStartScreen() bool {
+	return m.errorMsg == nil && !m.loading && len(m.connections) == 0 && !m.searched
+}
+
 func (m appModel) renderStartScreen() string {
 	logo := sbbLogo
 	if m.nerdFont {
@@ -226,9 +230,9 @@ func (m appModel) renderStartScreen() string {
 	}
 	logo = strings.TrimRight(logo, "\n")
 
-	coloredLogo := m.styles.logo.Render(logo)
+	coloredLogo := m.renderLogo(logo)
 
-	text := m.styles.textMuted.Render("Enter stations above to see timetables")
+	text := m.renderStartTagline("Enter stations above to see timetables")
 
 	block := lipgloss.JoinVertical(lipgloss.Center, text, "", coloredLogo)
 

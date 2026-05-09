@@ -49,7 +49,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.connections = nil
 			m.errorMsg = nil
 			m.searched = true
-			return m, m.searchCmd()
+			return m, tea.Batch(m.searchCmd(), m.startLoadingCmd())
 
 		case " ":
 			active := m.headerOrder[m.tabIndex]
@@ -72,7 +72,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.connections = nil
 				m.errorMsg = nil
 				m.searched = true
-				return m, m.searchCmd()
+				return m, tea.Batch(m.searchCmd(), m.startLoadingCmd())
 			}
 
 		case "tab", "shift+tab":
@@ -157,6 +157,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case dataMsg:
 		m.loading = false
+		m.anim.Stop(animLoading)
 		if msg.err != nil {
 			m.errorMsg = fmt.Errorf("failed to fetch connections: %w", msg.err)
 			return m, nil
@@ -172,6 +173,34 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case versionCheckMsg:
 		m.newerVersion = msg.newerVersion
 		return m, nil
+
+	case animationTickMsg:
+		finished, next := m.anim.Tick()
+		cmds := []tea.Cmd{next}
+		if m.animations && m.onStartScreen() {
+			if logoBuildFinished(finished) {
+				cmds = append(cmds, m.anim.Start(animTaglineBuild, taglineBuildDuration))
+			}
+			if taglineBuildFinished(finished) {
+				cmds = append(cmds,
+					m.anim.Start(animLogoShine, shineDuration),
+					m.anim.Start(animTextShine, shineDuration),
+				)
+			}
+			if shineCycleFinished(finished) {
+				cmds = append(cmds, shineRestartCmd())
+			}
+		}
+		return m, tea.Batch(cmds...)
+
+	case shineRestartMsg:
+		if !m.animations || !m.onStartScreen() {
+			return m, nil
+		}
+		return m, tea.Batch(
+			m.anim.Start(animLogoShine, shineDuration),
+			m.anim.Start(animTextShine, shineDuration),
+		)
 	}
 
 	cmd := m.updateInputs(msg)
