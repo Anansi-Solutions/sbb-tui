@@ -52,12 +52,12 @@ func newIconSet(nerdFont bool) iconSet {
 
 	if nerdFont {
 		icons.arrival = "󰗔"
-		icons.departure = ""
-		icons.search = ""
-		icons.swap = ""
-		icons.vehicle = ""
-		icons.walk = ""
-		icons.prompt = " "
+		icons.departure = ""
+		icons.search = ""
+		icons.swap = ""
+		icons.vehicle = ""
+		icons.walk = ""
+		icons.prompt = " "
 	} else {
 		icons.arrival = "⤙"
 		icons.departure = "⤚"
