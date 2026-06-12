@@ -1,16 +1,47 @@
+# =============================================================================
+# MISE CONFIGURATION — sbb-tui
+# =============================================================================
+# Mise (https://mise.jdx.dev) manages the project's development environment:
+# the Go toolchain, linters/formatters, tasks, and git-hook installation —
+# all scoped to this repo.
+#
+# Git hooks are managed by hk (https://hk.jdx.dev), a sister project of mise.
+# Hook definitions live in hk.pkl at the repo root; mise installs/refreshes
+# them automatically via the `postinstall` hook below.
+#
+# GETTING STARTED (see CONTRIBUTING.md for the full walkthrough):
+#   1. Install mise:  https://mise.jdx.dev/getting-started.html#installing-mise-cli
+#   2. Clone the repo, `cd` into it, and run `mise trust` if prompted.
+#   3. Run `mise install`. This installs every tool below and the
+#      `postinstall` hook then installs the hk git hooks.
+#   4. `cd` out and back into the repo: there should be no [WARNING] message.
+#   5. Check your code with `hk check` (read-only) or `hk fix` (auto-fix).
+# =============================================================================
+
+# ─── Tools ───────────────────────────────────────────────────────────────────
+# Installed via `mise install`. Add new ones with `mise use <tool>@<version>`.
+# `go` is pinned to the minor that go.mod requires so mise, CI and the release
+# build all use the same Go.
+
 [tools]
 go = "1.25"
 gofumpt = "latest"
 hk = "latest"
 "go:golang.org/x/tools/cmd/godoc" = "latest"
 "go:golang.org/x/tools/cmd/goimports" = "latest"
-pkl = "latest"
-yq = "latest"
 taplo = "latest"
 golangci-lint = "latest"
 markdownlint-cli2 = "latest"
 
+# ─── Environment variables ──────────────────────────────────────────────────
+# Names starting with "_" are internal to this file (ANSI styles used by the
+# enter-hook warnings below); everything else is exported to the shell.
+
 [env]
+# Make hk wrap its git hooks with `mise x`, so the mise-pinned tools are used
+# even by developers who haven't activated mise in their shell.
+HK_MISE = "1"
+
 # Styles
 _S_RESET = "\u001b[0m"
 _S_BOLD = "\u001b[1m"
@@ -27,7 +58,8 @@ _LINK_START = "\u001b]8;;"
 _LINK_SEP = "\u001b\\"
 _LINK_END = "\u001b]8;;\u001b\\"
 
-HK_MISE = 1
+# ─── Tasks ───────────────────────────────────────────────────────────────────
+# Run with `mise run <task>`. List available tasks with `mise tasks`.
 
 [tasks.docs]
 description = "Serve godoc at http://localhost:6060"
@@ -39,10 +71,18 @@ godoc -http=:6060
 '''
 
 [tasks.pre-commit]
+description = "Run the hk pre-commit hook against staged files"
 run = "hk run pre-commit"
 
+# ─── Hooks ───────────────────────────────────────────────────────────────────
+
+# -- Setup: runs once after `mise install` (no `mise activate` required), so a
+# fresh clone only needs `mise install` to be fully set up. Idempotent.
+[hooks]
+postinstall = "hk install --mise"
+
+# -- Enter: warn if any declared tool is missing, prompting `mise install`.
 [[hooks.enter]]
-# Verify all tools defined in [tools] are actually installed
 script = """
 missing=$(mise ls --missing --offline | awk '{print $1}' | tr '\n' ' ')
 
@@ -53,15 +93,18 @@ if [ -n "$missing" ]; then
 fi
 """
 
+# -- Enter: warn if the hk git hooks aren't installed. hk installs config-based
+# hooks on Git 2.54+ (git config hook.hk-*.command) and falls back to a shim in
+# the hooks dir on older Git, so we check both. The hooks-dir path is resolved
+# with `git rev-parse` so this works from any subdirectory and in worktrees.
 [[hooks.enter]]
-script = """
-if [ ! -f ".git/hooks/pre-commit" ] || ! grep -q "pre-commit" ".git/hooks/pre-commit"; then
-  echo "${_C_RED}[WARNING]${_S_RESET}"
-  echo "Git pre-commit ${_C_MAGENTA}hooks${_S_RESET} not initialized!"
-  echo "Run '${_C_GREEN}mise run init${_S_RESET}' to enable pre-commit hooks."
-fi
-"""
+script = '''
+hook_path=$(git rev-parse --git-path hooks/pre-commit 2>/dev/null)
 
-[[hooks.postinstall]]
-# Automatically install/update hooks when tools are installed
-script = "hk install --mise"
+if ! git config --get hook.hk-pre-commit.command >/dev/null 2>&1 \
+  && ! { [ -f "$hook_path" ] && grep -q "hk" "$hook_path"; }; then
+  echo "${_C_RED}[WARNING]${_S_RESET}"
+  echo "Git ${_C_MAGENTA}hooks${_S_RESET} not installed!"
+  echo "Run '${_C_GREEN}mise install${_S_RESET}' to install them."
+fi
+'''
