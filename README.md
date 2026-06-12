@@ -1,6 +1,7 @@
 # SBB-TUI
 
-TUI client for Switzerland's public transports timetables, inspired by the SBB/CFF/FFS [app](https://www.sbb.ch/).
+Unofficial TUI client for Switzerland's public transports timetables, inspired by the SBB/CFF/FFS [app](https://www.sbb.ch/).
+Timetable data is provided by the [search.ch timetable API](https://search.ch/timetable/api/help) (Swisscom Directories AG).
 
 ![demo](https://github.com/user-attachments/assets/fd8e5f24-e862-4d5e-bfa0-64017be8f959)
 
@@ -9,6 +10,7 @@ TUI client for Switzerland's public transports timetables, inspired by the SBB/C
 - 📍 **Any station**: search connections between any Swiss (and neighbouring) public transport stations
 - 🚆 **Any transport**: train, tram, bus, boat, cable cars (and even funiculars!)
 - 🧾 **Detailed journey view** with: transfers, platforms, delays, vehicle information and walk sections
+- ⚠️ **Disruption warnings** with a summary banner in the detail view
 - ➡️ **Autocompletion** of station names
 - 🚩 **CLI flags** to pre-fill fields for quick lookups
 - 🧭 Clickable **Google Maps links** for walking sections
@@ -91,12 +93,12 @@ ui:
     warning:         "#D82E20"
     borderFocused:   "#D82E20"
     borderUnfocused: "#484848"
-    keysFg:          "#FFFFFF"
-    keysBg:          "#484848"
-    vehicleFg:       "#FFFFFF"
-    vehicleBg:       "#2E3279"
+    badgeKeyFg:      "#FFFFFF"
+    badgeKeyBg:      "#484848"
+    badgeVehicleFg:  "#FFFFFF"
+    badgeVehicleBg:  "#2E3279"
     badgeModelFg:    "#FFFFFF"
-    badgeModelBg:    "#D82E20"
+    badgeModelBg:    "#7F7F7F"
     badgeCompanyFg:  "#484848"
     badgeCompanyBg:  "#FFFFFF"
     logo:            "#FFFFFF"
@@ -127,6 +129,9 @@ Flags:
 ## ❓ Why
 
 > I travel 4 hours a day and often work from the train, passing through remote regions of Switzerland where loading the SBB website alone can take up to an entire minute before I've even had a chance to search for my next connection (back when I started building this, my cellular data plan provided me with 500kb/s at most in the city). On top of that, I love open source and disliked handing data over to corporations unnecessarily, so I loved the idea of a faster solution that only fetched the necessary data, the one I requested. One day, while exploring the idea of building my first TUI, I stumbled upon the incredible [Swiss public transport API](https://transport.opendata.ch/docs.html) and I knew I'd found the perfect occasion to start!
+
+> [!NOTE]
+> SBB-TUI originally ran on `transport.opendata.ch` and has since moved to the [search.ch timetable API](https://search.ch/timetable/api/help), which provides more data.
 
 ## 🍻 HELP WANTED
 
