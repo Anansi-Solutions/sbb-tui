@@ -1,3 +1,24 @@
+# [1.15.0](https://github.com/Necrom4/sbb-tui/compare/v1.14.2...v1.15.0) (2026-06-12)
+
+
+### Bug Fixes
+
+* **api:** add a timeout to API requests ([2f004c2](https://github.com/Necrom4/sbb-tui/commit/2f004c2be2384a96699ceef051227bc2c20c2a0e))
+* **mise:** enable experimental so the postinstall hook runs ([d5e87cd](https://github.com/Necrom4/sbb-tui/commit/d5e87cd98026bd2fa4d3070a51e985d474126fb7))
+* **model:** recognize vehicle legs without a line label ([7b1f59f](https://github.com/Necrom4/sbb-tui/commit/7b1f59f83645948eaa44d8db40be1a6c8f3a7ccd))
+* **ui:** use neutral gray as default line badge background ([83335dd](https://github.com/Necrom4/sbb-tui/commit/83335dd9646a5a4158a177d1c4265c74b6b866ed)), closes [#7F7F7](https://github.com/Necrom4/sbb-tui/issues/7F7F7)
+
+
+### Features
+
+* **ui:** color line badges with official line colors ([ce8833b](https://github.com/Necrom4/sbb-tui/commit/ce8833bb155a49d090e1fe33f1992124b5dfde9c))
+* **ui:** display per-class occupancy as shaded icons ([c6dcbf2](https://github.com/Necrom4/sbb-tui/commit/c6dcbf2e19b14ca717472afcb56dc82e87fa4726))
+* **ui:** pick vehicle icon from the leg's transport type ([d619d8c](https://github.com/Necrom4/sbb-tui/commit/d619d8cf4fee02b9e79d13fa7f70739a66921983))
+* **ui:** prefix bare line numbers with their category ([c02a859](https://github.com/Necrom4/sbb-tui/commit/c02a85930aaaee5251ea2be1e20e185ed4742d3e))
+* **ui:** search immediately when from and to flags are given ([552e068](https://github.com/Necrom4/sbb-tui/commit/552e0680f01d7bd1c0b9cbc8210bfc743ecd3500))
+* **ui:** show full occupancy in red ([d63258f](https://github.com/Necrom4/sbb-tui/commit/d63258fce2469a773d6b89c3b11bd0448fa6c575))
+* **ui:** surface connection disruptions ([676aacc](https://github.com/Necrom4/sbb-tui/commit/676aacc6f61ae4130fa20cde45a21b85109dcb68))
+
 ## [1.14.2](https://github.com/Necrom4/sbb-tui/compare/v1.14.1...v1.14.2) (2026-05-09)
 
 
