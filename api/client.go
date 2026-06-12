@@ -9,11 +9,16 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/necrom4/sbb-tui/model"
 )
 
 const baseURL = "https://timetable.search.ch/api"
+
+// httpClient bounds every API call so a dead connection (tunnels,
+// spotty cellular) fails fast instead of hanging the search forever.
+var httpClient = &http.Client{Timeout: 15 * time.Second}
 
 // completionEntry is one suggestion returned by completion.json.
 type completionEntry struct {
@@ -36,7 +41,7 @@ func getJSON(apiURL string, out any) error {
 	}
 	req.Header.Set("Accept-Language", "en")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}
