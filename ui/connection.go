@@ -167,6 +167,9 @@ func (m appModel) renderJourneyLeg(leg model.Leg, width, labelCol, platformCol i
 	vehicleModel := m.styles.vehicleModel.Render(leg.Line)
 	company := m.styles.company.Render(leg.OperatorName())
 	vehicleLine := fmt.Sprintf("%s  %s  %s %s %s", indent, m.icons.vertLine, vehicleIcon, vehicleModel, company)
+	if occupancy := m.renderOccupancy(leg.Occupancy); occupancy != "" {
+		vehicleLine += "  " + occupancy
+	}
 	lines = append(lines, vehicleLine)
 
 	destLine := fmt.Sprintf("%s  %s   %s", indent, m.icons.vertLine, m.styles.textMuted.Render(m.icons.towards+" "+leg.Terminal))
@@ -366,7 +369,13 @@ func (m appModel) renderSimpleConnection(c model.Connection, index int, width in
 
 	duration := m.styles.text.Render(formatDuration(c.Duration))
 
-	bottomLinePadding := max(lineContentWidth-lipgloss.Width(platformInfo)-lipgloss.Width(duration), 1)
+	occupancy := m.renderOccupancy(c.Occupancy)
+	durationPart := duration
+	if occupancy != "" {
+		durationPart = occupancy + "   " + duration
+	}
+
+	bottomLinePadding := max(lineContentWidth-lipgloss.Width(platformInfo)-lipgloss.Width(durationPart), 1)
 
 	content := fmt.Sprintf(
 		"\n  %s %s %s  %s\n\n  %s%s%s%s%s  %s%s\n\n  %s%s%v\n",
@@ -383,10 +392,48 @@ func (m appModel) renderSimpleConnection(c model.Connection, index int, width in
 		arrivalDelay,
 		platformInfo,
 		strings.Repeat(" ", bottomLinePadding),
-		duration,
+		durationPart,
 	)
 
 	return style.Render(content)
+}
+
+// renderOccupancyClass renders "1." or "2." followed by three person
+// glyphs, the first `level` ones bright and the rest dimmed.
+// It returns "" when the level is unknown.
+func (m appModel) renderOccupancyClass(label string, level int) string {
+	if level <= 0 {
+		return ""
+	}
+	level = min(level, 3)
+
+	var sb strings.Builder
+	sb.WriteString(m.styles.textMuted.Render(label))
+	for i := 1; i <= 3; i++ {
+		if i <= level {
+			sb.WriteString(m.styles.text.Render(m.icons.person))
+		} else {
+			sb.WriteString(m.styles.occupancyOff.Render(m.icons.person))
+		}
+	}
+	return sb.String()
+}
+
+// renderOccupancy renders the SBB-style per-class occupancy indicator,
+// e.g. "1.●○○  2.●●○", or "" when nothing is known.
+func (m appModel) renderOccupancy(o model.Occupancy) string {
+	first := m.renderOccupancyClass("1.", o.FirstClass())
+	second := m.renderOccupancyClass("2.", o.SecondClass())
+
+	switch {
+	case first == "" && second == "":
+		return ""
+	case first == "":
+		return second
+	case second == "":
+		return first
+	}
+	return first + "  " + second
 }
 
 // formatDuration converts the API duration in seconds to "1 h 15 min" or "15 min".

@@ -44,6 +44,7 @@ type styles struct {
 	warningBold     lipgloss.Style
 	vehicleIcon     lipgloss.Style
 	vehicleModel    lipgloss.Style
+	occupancyOff    lipgloss.Style
 	company         lipgloss.Style
 	logo            lipgloss.Style
 	bold            lipgloss.Style
@@ -90,6 +91,9 @@ func newStyles(theme config.Theme) styles {
 		warningBold: lipgloss.NewStyle().
 			Foreground(themeColor(theme.Warning)).
 			Bold(true),
+		occupancyOff: lipgloss.NewStyle().
+			Foreground(themeColor(theme.TextMuted)).
+			Faint(true),
 		vehicleIcon: lipgloss.NewStyle().
 			Background(themeColor(theme.BadgeVehicleBg)).
 			Foreground(themeColor(theme.BadgeVehicleFg)),

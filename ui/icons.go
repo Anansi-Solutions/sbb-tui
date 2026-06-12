@@ -13,6 +13,7 @@ type iconSet struct {
 	vehicle   string
 	walk      string
 	prompt    string
+	person    string
 
 	// Mode-invariant
 	towards   string
@@ -51,6 +52,7 @@ func newIconSet(nerdFont bool) iconSet {
 	}
 
 	if nerdFont {
+		icons.person = "\uf007" //
 		icons.arrival = "󰗔"
 		icons.departure = ""
 		icons.search = ""
@@ -66,6 +68,7 @@ func newIconSet(nerdFont bool) iconSet {
 		icons.vehicle = "◇"
 		icons.walk = "walk:"
 		icons.prompt = "⏵ "
+		icons.person = "●"
 	}
 
 	return icons
