@@ -60,21 +60,21 @@ func newIconSet(nerdFont bool) iconSet {
 
 	if nerdFont {
 		icons.vehicleByType = map[string]string{
-			"train":         "\uf238",     //
-			"express_train": "\uf238",     //
-			"strain":        "\uf239",     //
-			"metro":         "\uf239",     //
-			"tram":          "\U000F052D", // 󰔭
-			"bus":           "\uf207",     //
-			"night_bus":     "\uf207",     //
-			"post":          "\uf207",     //
-			"ship":          "\uf21a",     //
-			"cableway":      "\U000F0686", // 󰚆
-			"gondola":       "\U000F0686", // 󰚆
-			"funicular":     "\U000F0686", // 󰚆
+			"train":         "",
+			"express_train": "",
+			"strain":        "󰣄",
+			"metro":         "󰣄",
+			"tram":          "󰔭",
+			"bus":           "󰃧",
+			"night_bus":     "󰃧",
+			"post":          "󰃧",
+			"ship":          "",
+			"cableway":      "󰚆",
+			"gondola":       "󰚆",
+			"funicular":     "󰚆",
 		}
-		icons.warning = "\uf071" //
-		icons.person = "\uf007"  //
+		icons.warning = ""
+		icons.person = ""
 		icons.arrival = "󰗔"
 		icons.departure = ""
 		icons.search = ""
