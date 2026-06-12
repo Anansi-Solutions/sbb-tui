@@ -163,7 +163,7 @@ func (m appModel) renderJourneyLeg(leg model.Leg, width, labelCol, platformCol i
 		lines = append(lines, spacingLine)
 	}
 
-	vehicleIcon := m.styles.vehicleIcon.Render(" " + m.icons.vehicle + " ")
+	vehicleIcon := m.styles.vehicleIcon.Render(" " + m.icons.vehicleFor(leg.Type) + " ")
 	vehicleModel := m.styles.lineStyle(leg.FgColor, leg.BgColor).Render(leg.Line)
 	company := m.styles.company.Render(leg.OperatorName())
 	vehicleLine := fmt.Sprintf("%s  %s  %s %s %s", indent, m.icons.vertLine, vehicleIcon, vehicleModel, company)
@@ -312,7 +312,7 @@ func (m appModel) renderSimpleConnection(c model.Connection, index int, width in
 
 	lineContentWidth := max(width-style.GetHorizontalFrameSize()-2, 0)
 
-	vehicleIcon := m.styles.vehicleIcon.Render(" " + m.icons.vehicle + " ")
+	vehicleIcon := m.styles.vehicleIcon.Render(" " + m.icons.vehicleFor(c.Legs[firstVehicle].Type) + " ")
 	vehicleModel := m.styles.lineStyle(c.Legs[firstVehicle].FgColor, c.Legs[firstVehicle].BgColor).Render(c.Legs[firstVehicle].Line)
 	company := m.styles.company.Render(c.Legs[firstVehicle].OperatorName())
 	endStop := m.styles.text.Render(c.Legs[firstVehicle].Terminal)
