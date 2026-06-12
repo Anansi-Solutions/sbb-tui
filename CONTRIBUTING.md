@@ -4,14 +4,14 @@
 
 ## How to contribute to SBB-TUI
 
-#### **Issues**
+### **Issues**
 
 - **Ensure the bug was not already reported** by searching on GitHub under [Issues](https://github.com/necrom4/sbb-tui/issues).
 - If you're unable to find an open issue addressing the problem, [open a new one](https://github.com/necrom4/sbb-tui/issues/new). Be sure to include:
   - **Title and clear description** with as much relevant information as possible
   - A **code sample** or an **executable test case** demonstrating the expected behavior that is not occurring. (**screenshots** appreciated)
 
-#### **Pull Requests**
+### **Pull Requests**
 
 - Start by creating an **Issue** addressing the bug/feature, create a **Fork** and start coding. If the idea for the change is accepted, you'll have the green light to open a PR with your code.
 - Ensure the PR description clearly describes the problem and solution. Include the relevant issue number.
