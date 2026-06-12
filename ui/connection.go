@@ -439,11 +439,16 @@ func (m appModel) renderOccupancyClass(label string, level int) string {
 	}
 	level = min(level, 3)
 
+	onStyle := m.styles.text
+	if level == 3 {
+		onStyle = m.styles.error
+	}
+
 	var sb strings.Builder
 	sb.WriteString(m.styles.textMuted.Render(label))
 	for i := 1; i <= 3; i++ {
 		if i <= level {
-			sb.WriteString(m.styles.text.Render(m.icons.person))
+			sb.WriteString(onStyle.Render(m.icons.person))
 		} else {
 			sb.WriteString(m.styles.occupancyOff.Render(m.icons.person))
 		}
