@@ -3,6 +3,7 @@ package model
 
 import (
 	"encoding/json"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -177,6 +178,54 @@ type Connection struct {
 	// Disruptions is kept raw: the API returns an object keyed by
 	// disruption ID, but historically also an empty array.
 	Disruptions json.RawMessage `json:"disruptions"`
+}
+
+// DisruptionTexts are the alert texts of a disruption in one verbosity level.
+type DisruptionTexts struct {
+	Summary     string `json:"summary"`
+	Duration    string `json:"duration"`
+	Description string `json:"description"`
+	Consequence string `json:"consequence"`
+}
+
+// Disruption is one service alert attached to a connection.
+type Disruption struct {
+	ID    string                     `json:"id"`
+	Texts map[string]DisruptionTexts `json:"texts"`
+}
+
+// Text returns the shortest text variant available (S, then M, then L).
+func (d Disruption) Text() DisruptionTexts {
+	for _, k := range []string{"S", "M", "L"} {
+		if t, ok := d.Texts[k]; ok {
+			return t
+		}
+	}
+	return DisruptionTexts{}
+}
+
+// DisruptionList decodes the raw disruptions payload into a stable-ordered
+// slice. The API returns an object keyed by disruption ID (historically an
+// empty array), so unknown shapes simply yield nil.
+func (c Connection) DisruptionList() []Disruption {
+	if len(c.Disruptions) == 0 {
+		return nil
+	}
+	var byID map[string]Disruption
+	if err := json.Unmarshal(c.Disruptions, &byID); err != nil {
+		return nil
+	}
+	ids := make([]string, 0, len(byID))
+	for id := range byID {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	list := make([]Disruption, 0, len(ids))
+	for _, id := range ids {
+		list = append(list, byID[id])
+	}
+	return list
 }
 
 // FirstVehicleLeg returns the index of the first vehicle leg, or -1.

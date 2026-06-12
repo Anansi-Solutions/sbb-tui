@@ -14,6 +14,8 @@ import (
 func (m appModel) buildDetailLines(c model.Connection, innerWidth int) []string {
 	var lines []string
 
+	lines = append(lines, m.renderDisruptionBanner(c)...)
+
 	// Pre-compute label/value widths so platform columns line up across legs.
 	labelCol := 0
 	valueCol := 0
@@ -86,6 +88,33 @@ func (m appModel) buildDetailLines(c model.Connection, innerWidth int) []string 
 		}
 	}
 
+	return lines
+}
+
+// renderDisruptionBanner returns the warning lines shown above a
+// disrupted connection's detail view, deduplicated by text.
+func (m appModel) renderDisruptionBanner(c model.Connection) []string {
+	var lines []string
+	seen := make(map[string]bool)
+	for _, d := range c.DisruptionList() {
+		t := d.Text()
+		if t.Summary == "" && t.Consequence == "" {
+			continue
+		}
+		key := t.Summary + "|" + t.Consequence
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+
+		lines = append(lines, m.styles.warningBold.Render(m.icons.warning+" "+t.Summary))
+		if t.Consequence != "" {
+			lines = append(lines, m.styles.warning.Render(t.Consequence))
+		}
+	}
+	if len(lines) > 0 {
+		lines = append(lines, "")
+	}
 	return lines
 }
 
@@ -316,6 +345,9 @@ func (m appModel) renderSimpleConnection(c model.Connection, index int, width in
 	vehicleModel := m.styles.lineStyle(c.Legs[firstVehicle].FgColor, c.Legs[firstVehicle].BgColor).Render(c.Legs[firstVehicle].Line)
 	company := m.styles.company.Render(c.Legs[firstVehicle].OperatorName())
 	endStop := m.styles.text.Render(c.Legs[firstVehicle].Terminal)
+	if len(c.DisruptionList()) > 0 {
+		endStop += "  " + m.styles.warningBold.Render(m.icons.warning)
+	}
 
 	dep := c.Legs[firstVehicle].Departure.Local().Format("15:04")
 	arr := c.Arrival.Local().Format("15:04")
