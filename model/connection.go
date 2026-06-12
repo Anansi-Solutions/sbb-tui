@@ -223,7 +223,7 @@ func (c Connection) DisruptionList() []Disruption {
 		return nil
 	}
 	var byID map[string]Disruption
-	if err := json.Unmarshal(c.Disruptions, &byID); err != nil {
+	if err := json.Unmarshal(c.Disruptions, &byID); err != nil || len(byID) == 0 {
 		return nil
 	}
 	ids := make([]string, 0, len(byID))

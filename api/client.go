@@ -14,7 +14,8 @@ import (
 	"github.com/necrom4/sbb-tui/model"
 )
 
-const baseURL = "https://timetable.search.ch/api"
+// baseURL is a variable so tests can point the client at a test server.
+var baseURL = "https://timetable.search.ch/api"
 
 // httpClient bounds every API call so a dead connection (tunnels,
 // spotty cellular) fails fast instead of hanging the search forever.
