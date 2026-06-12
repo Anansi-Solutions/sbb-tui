@@ -26,6 +26,17 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inputs[0].Width = inputWidth
 		m.inputs[1].Width = inputWidth
 
+		// Launch the search pre-filled via CLI flags once the terminal
+		// size is known, so the result count fits the window.
+		if m.pendingSearch {
+			m.pendingSearch = false
+			if err := m.validateInputs(); err == nil {
+				m.loading = true
+				m.searched = true
+				return m, tea.Batch(m.searchCmd(), m.startLoadingCmd())
+			}
+		}
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":

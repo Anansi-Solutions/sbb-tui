@@ -67,7 +67,7 @@ func DefaultTheme() Theme {
 		BadgeVehicleFg:    "#FFFFFF",
 		BadgeVehicleBg:    "#2E3279",
 		BadgeBadgeModelFg: "#FFFFFF",
-		BadgeModelBg:      "#D82E20",
+		BadgeModelBg:      "#7F7F7F",
 		BadgeCompanyFg:    "#484848",
 		BadgeCompanyBg:    "#FFFFFF",
 		Logo:              "white",

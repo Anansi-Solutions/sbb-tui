@@ -1,0 +1,35 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # mise owns the whole toolchain (Go + linters/formatters), pinned
+      # in mise.toml, so CI runs the exact tool versions contributors
+      # use locally. mise-action caches the installed tools.
+      - uses: jdx/mise-action@v2
+
+      # Go build/module cache, which mise's Go plugin doesn't provide.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          restore-keys: ${{ runner.os }}-go-
+
+      # Run the same build, vet, test and lint steps as the local git
+      # hooks, keeping hk.pkl the single source of truth.
+      - name: hk check
+        run: hk check --all

@@ -1,6 +1,8 @@
 amends "package://github.com/jdx/hk/releases/download/v1.46.0/hk@1.46.0#/Config.pkl"
 import "package://github.com/jdx/hk/releases/download/v1.46.0/hk@1.46.0#/Builtins.pkl"
 
+// File-scoped formatters and linters: fast, run on the staged files
+// that match their glob. These run on every commit.
 local linters = new Mapping<String, Step> {
   ["check-added-large-files"] = Builtins.check_added_large_files
   ["check-merge-conflict"] = Builtins.check_merge_conflict
@@ -15,10 +17,35 @@ local linters = new Mapping<String, Step> {
   }
   ["go-fumpt"] = Builtins.go_fumpt
   ["go-imports"] = Builtins.go_imports
+  ["go-vet"] = Builtins.go_vet
   ["golangci-lint"] = Builtins.golangci_lint
   ["trailing-whitespace"] = Builtins.trailing_whitespace
   ["taplo-format"] = Builtins.taplo_format
   ["taplo-lint"] = Builtins.taplo
+}
+
+// Whole-project Go commands: read-only, slow, and operate on the whole
+// module (./...) rather than a file list. They are gated on Go sources
+// changing and serialized with `exclusive` so they don't race the
+// file-scoped steps. Reserved for pre-push and manual check/fix runs.
+local project = new Mapping<String, Step> {
+  ["go-build"] {
+    glob = List("**/*.go", "go.mod", "go.sum")
+    check = "go build ./..."
+    exclusive = true
+  }
+  ["go-test"] {
+    glob = List("**/*.go", "go.mod", "go.sum")
+    check = "go test -race -cover ./..."
+    exclusive = true
+  }
+}
+
+// Everything, for `hk check`/`hk fix` and CI. Mirrors what runs across
+// the git hooks so `hk check --all` is a complete local stand-in for CI.
+local all = new Mapping<String, Step> {
+  ...linters
+  ...project
 }
 
 hooks {
@@ -27,12 +54,15 @@ hooks {
     stash = "git"
     steps = linters
   }
+  ["pre-push"] {
+    steps = project
+  }
   ["fix"] {
     fix = true
-    steps = linters
+    steps = all
   }
   ["check"] {
-    steps = linters
+    steps = all
   }
   ["commit-msg"] {
     steps {

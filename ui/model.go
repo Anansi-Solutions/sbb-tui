@@ -75,6 +75,7 @@ type appModel struct {
 	styles         styles
 	nerdFont       bool
 	isArrivalTime  bool
+	pendingSearch  bool
 	connections    []model.Connection
 	loading        bool
 	errorMsg       error
@@ -105,6 +106,7 @@ func NewModel(cfg config.Config) appModel {
 		styles:         newStyles(cfg.Theme),
 		nerdFont:       cfg.NerdFont,
 		isArrivalTime:  cfg.IsArrivalTime,
+		pendingSearch:  cfg.From != "" && cfg.To != "",
 		currentVersion: cfg.CurrentVersion,
 		animations:     cfg.Animations,
 		anim:           newAnimator(),

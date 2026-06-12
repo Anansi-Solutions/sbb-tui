@@ -17,7 +17,7 @@ ui:
     badgeVehicleFg:  "#FFFFFF"
     badgeVehicleBg:  "#2E3279"
     badgeModelFg:    "#FFFFFF"
-    badgeModelBg:    "#D82E20"
+    badgeModelBg:    "#7F7F7F"
     badgeCompanyFg:  "#484848"
     badgeCompanyBg:  "#FFFFFF"
     logo:            "#FFFFFF"
