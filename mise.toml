@@ -1,5 +1,5 @@
 # =============================================================================
-# MISE CONFIGURATION — sbb-tui
+# MISE CONFIGURATION - sbb-tui
 # =============================================================================
 # Mise (https://mise.jdx.dev) manages the project's development environment:
 # the Go toolchain, linters/formatters, tasks, and git-hook installation —
@@ -73,6 +73,14 @@ godoc -http=:6060
 [tasks.pre-commit]
 description = "Run the hk pre-commit hook against staged files"
 run = "hk run pre-commit"
+
+# ─── Settings ────────────────────────────────────────────────────────────────
+# `hooks` (below) is still an experimental mise feature, so it must be enabled
+# here for every contributor - otherwise `mise install` skips the postinstall
+# hook and the git hooks never get installed.
+
+[settings]
+experimental = true
 
 # ─── Hooks ───────────────────────────────────────────────────────────────────
 
