@@ -1,7 +1,9 @@
-// Package model defines the data types decoded from the transport API.
+// Package model defines the data types decoded from the search.ch timetable API.
 package model
 
 import (
+	"encoding/json"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -18,7 +20,8 @@ var SwissLocation = func() *time.Location {
 	return loc
 }()
 
-// Timestamp is a time.Time decoded from the API's RFC3339-ish format.
+// Timestamp is a time.Time decoded from the API's "2006-01-02 15:04:05"
+// format, which is expressed in Swiss local time.
 type Timestamp struct {
 	time.Time
 }
@@ -33,13 +36,13 @@ func (t Timestamp) Local() time.Time {
 	return t.In(SwissLocation)
 }
 
-// UnmarshalJSON parses the API's "2006-01-02T15:04:05-0700" format.
+// UnmarshalJSON parses the API's "2006-01-02 15:04:05" format in Swiss local time.
 func (t *Timestamp) UnmarshalJSON(b []byte) error {
 	s := strings.Trim(string(b), "\"")
 	if s == "null" || s == "" {
 		return nil
 	}
-	parsed, err := time.Parse("2006-01-02T15:04:05-0700", s)
+	parsed, err := time.ParseInLocation("2006-01-02 15:04:05", s, SwissLocation)
 	if err != nil {
 		return err
 	}
@@ -47,67 +50,151 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// Coordinate is a geographic point.
-type Coordinate struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
+// Delay is a delay decoded from the API's string format: "+N" for N
+// minutes of delay, or "X" when the stop/leg is cancelled.
+type Delay struct {
+	Minutes   int
+	Cancelled bool
 }
 
-// Station is a transport stop with a name and coordinates.
-type Station struct {
-	Name       string     `json:"name"`
-	Coordinate Coordinate `json:"coordinate"`
+// UnmarshalJSON tolerantly parses "+0", "+5", "X", "" and null.
+func (d *Delay) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), "\"")
+	if s == "" || s == "null" {
+		return nil
+	}
+	if strings.EqualFold(s, "X") {
+		d.Cancelled = true
+		return nil
+	}
+	if n, err := strconv.Atoi(strings.TrimPrefix(s, "+")); err == nil {
+		d.Minutes = n
+	}
+	return nil
 }
 
-// Departure describes when and where a section leaves.
-type Departure struct {
-	Station   Station   `json:"station"`
-	Scheduled Timestamp `json:"departure"`
-	Platform  string    `json:"platform"`
-	Delay     int       `json:"delay"`
+// Occupancy is the API's two-digit occupancy code: the first digit is the
+// first-class load, the second the second-class load (1=low, 2=medium,
+// 3=high, 0/absent=unknown).
+type Occupancy string
+
+// digit returns the numeric value of the occupancy digit at index i, or 0.
+func (o Occupancy) digit(i int) int {
+	if len(o) <= i || o[i] < '0' || o[i] > '9' {
+		return 0
+	}
+	return int(o[i] - '0')
 }
 
-// Arrival describes when and where a section reaches its end.
-type Arrival struct {
-	Station   Station   `json:"station"`
-	Scheduled Timestamp `json:"arrival"`
-	Platform  string    `json:"platform"`
-	Delay     int       `json:"delay"`
+// FirstClass returns the first-class occupancy level (0=unknown, 1=low, 2=medium, 3=high).
+func (o Occupancy) FirstClass() int { return o.digit(0) }
+
+// SecondClass returns the second-class occupancy level (0=unknown, 1=low, 2=medium, 3=high).
+func (o Occupancy) SecondClass() int { return o.digit(1) }
+
+// Stop is an intermediate halt within a Leg.
+type Stop struct {
+	Name      string    `json:"name"`
+	StopID    string    `json:"stopid"`
+	Arrival   Timestamp `json:"arrival"`
+	Departure Timestamp `json:"departure"`
+	DepDelay  Delay     `json:"dep_delay"`
+	Occupancy Occupancy `json:"occupancy"`
+	Lat       float64   `json:"lat"`
+	Lon       float64   `json:"lon"`
 }
 
-// Section is a single leg of a connection: a vehicle journey or a walk.
-type Section struct {
-	Journey *struct {
-		Category string `json:"category"`
-		Number   string `json:"number"`
-		Operator string `json:"operator"`
-		To       string `json:"to"`
-	} `json:"journey"`
-	Walk *struct {
-		Duration  int       `json:"duration"`
-		Departure Departure `json:"departure"`
-		Arrival   Arrival   `json:"arrival"`
-	} `json:"walk"`
-	Departure Departure `json:"departure"`
-	Arrival   Arrival   `json:"arrival"`
+// Exit describes where (and when) a leg is left.
+type Exit struct {
+	Name      string    `json:"name"`
+	SBBName   string    `json:"sbb_name"`
+	StopID    string    `json:"stopid"`
+	Arrival   Timestamp `json:"arrival"`
+	ArrDelay  Delay     `json:"arr_delay"`
+	Track     string    `json:"track"`
+	WaitTime  int       `json:"waittime"` // seconds until the next departure
+	IsAddress bool      `json:"isaddress"`
+	Lat       float64   `json:"lat"`
+	Lon       float64   `json:"lon"`
 }
 
-// Connection is the full route returned by the API for one query result.
+// Leg is one node of a connection: the stop where you board (or start
+// walking) plus the vehicle ridden and the Exit where you get off.
+// The final leg of a connection is a bare arrival node: it has a Name
+// and Arrival but no Exit, vehicle or walk attached.
+type Leg struct {
+	Name        string    `json:"name"`
+	SBBName     string    `json:"sbb_name"`
+	StopID      string    `json:"stopid"`
+	TripID      string    `json:"tripid"`
+	Arrival     Timestamp `json:"arrival"`   // arrival at this node
+	Departure   Timestamp `json:"departure"` // departure from this node
+	DepDelay    Delay     `json:"dep_delay"`
+	Type        string    `json:"type"`      // walk, bus, tram, strain, express_train, ship, ...
+	TypeName    string    `json:"type_name"` // human-readable vehicle kind
+	Line        string    `json:"line"`      // e.g. "S13", "IC 1", "17"
+	Category    string    `json:"*G"`        // e.g. "IC"
+	LineNumber  string    `json:"*L"`        // e.g. "1"
+	Terminal    string    `json:"terminal"`  // direction the vehicle is headed
+	Operator    string    `json:"operator"`
+	FgColor     string    `json:"fgcolor"` // line color, hex without '#'
+	BgColor     string    `json:"bgcolor"` // line color, hex without '#'
+	Track       string    `json:"track"`   // "13"; a trailing '!' marks a platform change
+	Occupancy   Occupancy `json:"occupancy"`
+	RunningTime int       `json:"runningtime"` // seconds on board / walking
+	WaitTime    int       `json:"waittime"`    // seconds waited before departure
+	IsAddress   bool      `json:"isaddress"`
+	Lat         float64   `json:"lat"`
+	Lon         float64   `json:"lon"`
+	Exit        *Exit     `json:"exit"`
+	Stops       []Stop    `json:"stops"`
+}
+
+// IsWalk reports whether the leg is a walking transfer.
+func (l Leg) IsWalk() bool { return l.Type == "walk" }
+
+// OperatorName returns the operator with the API's stray internal
+// whitespace collapsed (e.g. "VBZ    F" -> "VBZ F").
+func (l Leg) OperatorName() string {
+	return strings.Join(strings.Fields(l.Operator), " ")
+}
+
+// IsVehicle reports whether the leg is ridden on a transport line.
+func (l Leg) IsVehicle() bool { return l.Line != "" && !l.IsWalk() }
+
+// Connection is one full route returned by the API.
 type Connection struct {
-	From struct {
-		Station   Station   `json:"station"`
-		Departure Timestamp `json:"departure"`
-		Delay     int       `json:"delay"`
-		Platform  string    `json:"platform"`
-	} `json:"from"`
+	From      string    `json:"from"`
+	To        string    `json:"to"`
+	Departure Timestamp `json:"departure"`
+	Arrival   Timestamp `json:"arrival"`
+	Duration  int       `json:"duration"` // seconds
+	DepDelay  Delay     `json:"dep_delay"`
+	ArrDelay  Delay     `json:"arr_delay"`
+	Occupancy Occupancy `json:"occupancy"`
+	Legs      []Leg     `json:"legs"`
 
-	To struct {
-		Station  Station   `json:"station"`
-		Arrival  Timestamp `json:"arrival"`
-		Platform string    `json:"platform"`
-	} `json:"to"`
+	// Disruptions is kept raw: the API returns an object keyed by
+	// disruption ID, but historically also an empty array.
+	Disruptions json.RawMessage `json:"disruptions"`
+}
 
-	Duration  string    `json:"duration"`
-	Transfers int       `json:"transfers"`
-	Sections  []Section `json:"sections"`
+// FirstVehicleLeg returns the index of the first vehicle leg, or -1.
+func (c Connection) FirstVehicleLeg() int {
+	for i := range c.Legs {
+		if c.Legs[i].IsVehicle() {
+			return i
+		}
+	}
+	return -1
+}
+
+// LastVehicleLeg returns the index of the last vehicle leg, or -1.
+func (c Connection) LastVehicleLeg() int {
+	for i := len(c.Legs) - 1; i >= 0; i-- {
+		if c.Legs[i].IsVehicle() {
+			return i
+		}
+	}
+	return -1
 }

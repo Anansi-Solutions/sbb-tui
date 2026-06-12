@@ -14,14 +14,18 @@ import (
 func (m appModel) buildDetailLines(c model.Connection, innerWidth int) []string {
 	var lines []string
 
-	// Pre-compute label/value widths so platform columns line up across sections.
+	// Pre-compute label/value widths so platform columns line up across legs.
 	labelCol := 0
 	valueCol := 0
-	for _, section := range c.Sections {
-		if section.Journey == nil {
+	for _, leg := range c.Legs {
+		if !leg.IsVehicle() {
 			continue
 		}
-		for _, p := range []string{section.Departure.Platform, section.Arrival.Platform} {
+		tracks := []string{leg.Track}
+		if leg.Exit != nil {
+			tracks = append(tracks, leg.Exit.Track)
+		}
+		for _, p := range tracks {
 			if p != "" {
 				label := m.icons.platformLabel(p)
 				if lw := len([]rune(label)); lw > labelCol {
@@ -38,21 +42,33 @@ func (m appModel) buildDetailLines(c model.Connection, innerWidth int) []string 
 		platformCol = labelCol + 1 + valueCol
 	}
 
-	for i, section := range c.Sections {
-		isFirst := i == 0
-		isLast := i == len(c.Sections)-1
+	// The last leg of a connection is a bare arrival node; it is rendered
+	// through the previous leg's exit, so find the last drawable leg.
+	lastRendered := -1
+	for i := range c.Legs {
+		if c.Legs[i].IsWalk() || c.Legs[i].IsVehicle() {
+			lastRendered = i
+		}
+	}
 
-		if section.Walk != nil {
-			lines = append(lines, m.renderWalkSection(section)...)
-		} else if section.Journey != nil {
-			lines = append(lines, m.renderJourneySection(section, innerWidth, labelCol, platformCol, isFirst, isLast)...)
+	for i, leg := range c.Legs {
+		isFirst := i == 0
+		isLast := i == lastRendered
+
+		switch {
+		case leg.IsWalk():
+			lines = append(lines, m.renderWalkLeg(leg)...)
+		case leg.IsVehicle():
+			lines = append(lines, m.renderJourneyLeg(leg, innerWidth, labelCol, platformCol, isFirst, isLast)...)
+		default:
+			continue
 		}
 
-		// Insert blank rows between sections so neighbouring legs don't visually collide.
+		// Insert blank rows between legs so neighbouring legs don't visually collide.
 		if !isLast {
-			nextIsWalk := c.Sections[i+1].Walk != nil
-			currentIsWalk := section.Walk != nil
-			hasArrDelay := section.Journey != nil && section.Arrival.Delay > 0
+			nextIsWalk := i+1 < len(c.Legs) && c.Legs[i+1].IsWalk()
+			currentIsWalk := leg.IsWalk()
+			hasArrDelay := leg.IsVehicle() && leg.Exit != nil && leg.Exit.ArrDelay.Minutes > 0
 			if currentIsWalk {
 				lines = append(lines, "")
 			} else if hasArrDelay {
@@ -117,17 +133,17 @@ func (m appModel) renderFullConnection(c model.Connection, width int) string {
 	return m.styles.detailedResult.Width(width).Height(boxHeight).Render(strings.Join(visLines, "\n"))
 }
 
-// renderJourneySection renders a single transit leg (departure → vehicle → destination → arrival).
-func (m appModel) renderJourneySection(section model.Section, width, labelCol, platformCol int, isFirst, isLast bool) []string {
+// renderJourneyLeg renders a single transit leg (departure → vehicle → destination → arrival).
+func (m appModel) renderJourneyLeg(leg model.Leg, width, labelCol, platformCol int, isFirst, isLast bool) []string {
 	var lines []string
 
 	const timeCol = 5
 	const symbolCol = 5
 
-	depTime := section.Departure.Scheduled.Local().Format("15:04")
-	depDelay := section.Departure.Delay
-	depStation := section.Departure.Station.Name
-	depPlatform := section.Departure.Platform
+	depTime := leg.Departure.Local().Format("15:04")
+	depDelay := leg.DepDelay.Minutes
+	depStation := leg.Name
+	depPlatform := leg.Track
 
 	depDot := m.icons.hollowDot
 	if isFirst {
@@ -148,43 +164,48 @@ func (m appModel) renderJourneySection(section model.Section, width, labelCol, p
 	}
 
 	vehicleIcon := m.styles.vehicleIcon.Render(" " + m.icons.vehicle + " ")
-	vehicleModel := m.styles.vehicleModel.Render(section.Journey.Category + " " + section.Journey.Number)
-	company := m.styles.company.Render(section.Journey.Operator)
+	vehicleModel := m.styles.vehicleModel.Render(leg.Line)
+	company := m.styles.company.Render(leg.OperatorName())
 	vehicleLine := fmt.Sprintf("%s  %s  %s %s %s", indent, m.icons.vertLine, vehicleIcon, vehicleModel, company)
 	lines = append(lines, vehicleLine)
 
-	destLine := fmt.Sprintf("%s  %s   %s", indent, m.icons.vertLine, m.styles.textMuted.Render(m.icons.towards+" "+section.Journey.To))
+	destLine := fmt.Sprintf("%s  %s   %s", indent, m.icons.vertLine, m.styles.textMuted.Render(m.icons.towards+" "+leg.Terminal))
 	lines = append(lines, destLine)
 
 	lines = append(lines, spacingLine)
 
-	arrTime := section.Arrival.Scheduled.Local().Format("15:04")
-	arrDelay := section.Arrival.Delay
-	arrStation := section.Arrival.Station.Name
-	arrPlatform := section.Arrival.Platform
+	if leg.Exit != nil {
+		arrTime := leg.Exit.Arrival.Local().Format("15:04")
+		arrDelay := leg.Exit.ArrDelay.Minutes
+		arrStation := leg.Exit.Name
+		arrPlatform := leg.Exit.Track
 
-	arrSymbol := m.icons.vertLine
-	if isLast {
-		arrSymbol = m.icons.filledDot
-	}
+		arrSymbol := m.icons.vertLine
+		if isLast {
+			arrSymbol = m.icons.filledDot
+		}
 
-	arrLine := m.formatStationLine(arrTime, arrSymbol, arrStation, arrPlatform, width, timeCol, symbolCol, labelCol, platformCol, false)
-	lines = append(lines, arrLine)
+		arrLine := m.formatStationLine(arrTime, arrSymbol, arrStation, arrPlatform, width, timeCol, symbolCol, labelCol, platformCol, false)
+		lines = append(lines, arrLine)
 
-	if arrDelay > 0 {
-		delayStr := m.styles.warningBold.Render(fmt.Sprintf("%*s'", timeCol, fmt.Sprintf("+%d", arrDelay)))
-		lines = append(lines, delayStr)
+		if arrDelay > 0 {
+			delayStr := m.styles.warningBold.Render(fmt.Sprintf("%*s'", timeCol, fmt.Sprintf("+%d", arrDelay)))
+			lines = append(lines, delayStr)
+		}
 	}
 
 	return lines
 }
 
-// googleMapsURL returns a Google Maps walking-directions URL between a section's two stations.
-func googleMapsURL(s model.Section) string {
-	dep := s.Departure.Station.Coordinate
-	arr := s.Arrival.Station.Coordinate
+// googleMapsURL returns a Google Maps walking-directions URL between a leg's stop and its exit.
+func googleMapsURL(leg model.Leg) string {
+	if leg.Exit == nil ||
+		(leg.Lat == 0 && leg.Lon == 0) ||
+		(leg.Exit.Lat == 0 && leg.Exit.Lon == 0) {
+		return ""
+	}
 	return fmt.Sprintf("https://www.google.com/maps/dir/?api=1&origin=%f,%f&destination=%f,%f&travelmode=walking",
-		dep.X, dep.Y, arr.X, arr.Y)
+		leg.Lat, leg.Lon, leg.Exit.Lat, leg.Exit.Lon)
 }
 
 // renderLink wraps text in an OSC 8 terminal hyperlink.
@@ -192,24 +213,23 @@ func renderLink(text, url string) string {
 	return fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", url, text)
 }
 
-// renderWalkSection renders a walking transfer between two stations as a clickable duration.
-func (m appModel) renderWalkSection(section model.Section) []string {
+// walkMinutes returns the duration of a walk leg in minutes.
+func walkMinutes(leg model.Leg) int {
+	if leg.RunningTime > 0 {
+		return leg.RunningTime / 60
+	}
+	if leg.Exit != nil && !leg.Departure.IsZero() && !leg.Exit.Arrival.IsZero() {
+		return int(leg.Exit.Arrival.Sub(leg.Departure).Minutes())
+	}
+	return 0
+}
+
+// renderWalkLeg renders a walking transfer between two stops as a clickable duration.
+func (m appModel) renderWalkLeg(leg model.Leg) []string {
 	var lines []string
 
-	walkDuration := ""
-	if section.Walk != nil {
-		dur := section.Walk.Duration
-		if dur > 0 {
-			walkDuration = fmt.Sprintf("%d", dur/60)
-		} else {
-			depTime := section.Departure.Scheduled.Time
-			arrTime := section.Arrival.Scheduled.Time
-			if !depTime.IsZero() && !arrTime.IsZero() {
-				walkDuration = fmt.Sprintf("%d", int(arrTime.Sub(depTime).Minutes()))
-			}
-		}
-		url := googleMapsURL(section)
-
+	walkDuration := fmt.Sprintf("%d", walkMinutes(leg))
+	if url := googleMapsURL(leg); url != "" {
 		// TODO: add `` icon and set that as clickable url link instead of the time
 		walkDuration = renderLink(walkDuration, url)
 	}
@@ -221,7 +241,7 @@ func (m appModel) renderWalkSection(section model.Section) []string {
 }
 
 // formatStationLine formats one row of "time  symbol  station  …  platform"
-// in the detail view, padded to align across all sections.
+// in the detail view, padded to align across all legs.
 func (m appModel) formatStationLine(timeStr, symbol, station, platform string, width, timeCol, symbolCol, labelCol, platformCol int, bold bool) string {
 	textStyle := m.styles.text
 	if bold {
@@ -275,16 +295,8 @@ func truncateString(s string, maxLen int) string {
 
 // renderSimpleConnection renders one row of the result list with vehicle badge, timeline and platform.
 func (m appModel) renderSimpleConnection(c model.Connection, index int, width int) string {
-	firstVehicle := -1
-	lastVehicle := -1
-	for i := range c.Sections {
-		if c.Sections[i].Journey != nil {
-			if firstVehicle == -1 {
-				firstVehicle = i
-			}
-			lastVehicle = i
-		}
-	}
+	firstVehicle := c.FirstVehicleLeg()
+	lastVehicle := c.LastVehicleLeg()
 
 	style := m.styles.inactive.Width(width)
 	if index == m.resultIndex {
@@ -298,23 +310,25 @@ func (m appModel) renderSimpleConnection(c model.Connection, index int, width in
 	lineContentWidth := max(width-style.GetHorizontalFrameSize()-2, 0)
 
 	vehicleIcon := m.styles.vehicleIcon.Render(" " + m.icons.vehicle + " ")
-	vehicleModel := m.styles.vehicleModel.Render(c.Sections[firstVehicle].Journey.Category + " " + c.Sections[firstVehicle].Journey.Number)
-	company := m.styles.company.Render(c.Sections[firstVehicle].Journey.Operator)
-	endStop := m.styles.text.Render(c.Sections[firstVehicle].Journey.To)
+	vehicleModel := m.styles.vehicleModel.Render(c.Legs[firstVehicle].Line)
+	company := m.styles.company.Render(c.Legs[firstVehicle].OperatorName())
+	endStop := m.styles.text.Render(c.Legs[firstVehicle].Terminal)
 
-	dep := c.Sections[firstVehicle].Departure.Scheduled.Local().Format("15:04")
-	arr := c.To.Arrival.Local().Format("15:04")
+	dep := c.Legs[firstVehicle].Departure.Local().Format("15:04")
+	arr := c.Arrival.Local().Format("15:04")
 	departure := m.styles.bold.Render(dep)
 	arrival := m.styles.bold.Render(arr)
 
-	departureDelay := m.formatDelay(c.Sections[firstVehicle].Departure.Delay)
-	arrivalDelay := m.formatDelay(c.Sections[lastVehicle].Arrival.Delay)
+	departureDelay := m.formatDelay(c.Legs[firstVehicle].DepDelay.Minutes)
+	arrivalDelay := ""
+	if exit := c.Legs[lastVehicle].Exit; exit != nil {
+		arrivalDelay = m.formatDelay(exit.ArrDelay.Minutes)
+	}
 
 	timelinePrefix := ""
-	if c.Sections[0].Walk != nil {
-		walkMinutes := int(c.Sections[0].Arrival.Scheduled.Sub(c.Sections[0].Departure.Scheduled).Minutes())
-		if walkMinutes > 0 {
-			timelinePrefix = m.icons.walk + " " + m.styles.text.Render(fmt.Sprintf("%d'", walkMinutes)) + "  "
+	if c.Legs[0].IsWalk() {
+		if minutes := walkMinutes(c.Legs[0]); minutes > 0 {
+			timelinePrefix = m.icons.walk + " " + m.styles.text.Render(fmt.Sprintf("%d'", minutes)) + "  "
 		}
 	}
 
@@ -344,10 +358,7 @@ func (m appModel) renderSimpleConnection(c model.Connection, index int, width in
 	stopsLine := m.styles.bold.Render(stopsLineRaw)
 
 	platformInfo := ""
-	platform := c.Sections[firstVehicle].Departure.Platform
-	if platform == "" {
-		platform = c.From.Platform
-	}
+	platform := c.Legs[firstVehicle].Track
 	if platform != "" {
 		label := m.icons.platformLabel(platform)
 		platformInfo = m.styles.textMuted.Render(label) + " " + m.styles.text.Render(platform)
@@ -378,19 +389,13 @@ func (m appModel) renderSimpleConnection(c model.Connection, index int, width in
 	return style.Render(content)
 }
 
-// formatDuration converts the API "00d01:15:00" duration string to "1 h 15 min" or "15 min".
-func formatDuration(duration string) string {
-	parts := strings.Split(duration, ":")
-	if len(parts) < 2 {
-		return duration
+// formatDuration converts the API duration in seconds to "1 h 15 min" or "15 min".
+func formatDuration(seconds int) string {
+	minutes := seconds / 60
+	if minutes >= 60 {
+		return fmt.Sprintf("%d h %02d min", minutes/60, minutes%60)
 	}
-
-	minutes := parts[1]
-	if len(parts[0]) > 3 && parts[0][3:] != "00" {
-		hours := parts[0][3:]
-		return hours + " h " + minutes + " min"
-	}
-	return minutes + " min"
+	return fmt.Sprintf("%d min", minutes)
 }
 
 // formatDelay returns the styled "+N'" suffix when delay is positive, or an empty string.
@@ -402,50 +407,56 @@ func (m appModel) formatDelay(delay int) string {
 }
 
 // renderStopsLine draws the dotted "●─○─●" timeline between two stations,
-// proportional to each section's duration when available.
+// proportional to each leg's duration when available.
 func (m appModel) renderStopsLine(c model.Connection, totalWidth int) string {
-	if len(c.Sections) == 0 {
+	if len(c.Legs) == 0 {
 		return m.icons.filledDot + m.icons.horizLine + m.icons.horizLine + m.icons.filledDot
 	}
 
-	var sectionDurations []time.Duration
-	var totalSectionDuration time.Duration
-	for _, s := range c.Sections {
-		if s.Journey == nil {
+	var legDurations []time.Duration
+	vehicleCount := 0
+	var totalLegDuration time.Duration
+	for _, leg := range c.Legs {
+		if !leg.IsVehicle() {
 			continue
 		}
-		dep := s.Departure.Scheduled.Time
-		arr := s.Arrival.Scheduled.Time
+		vehicleCount++
+		if leg.Exit == nil {
+			continue
+		}
+		dep := leg.Departure.Time
+		arr := leg.Exit.Arrival.Time
 		if !dep.IsZero() && !arr.IsZero() {
 			dur := arr.Sub(dep)
-			sectionDurations = append(sectionDurations, dur)
-			totalSectionDuration += dur
+			legDurations = append(legDurations, dur)
+			totalLegDuration += dur
 		}
 	}
 
-	// Without per-section durations, distribute hops evenly.
-	if totalSectionDuration == 0 || len(sectionDurations) == 0 {
-		return m.icons.filledDot + strings.Repeat(m.icons.horizLine+m.icons.horizLine+m.icons.hollowDot, c.Transfers) + m.icons.horizLine + m.icons.horizLine + m.icons.filledDot
+	// Without per-leg durations, distribute hops evenly.
+	if totalLegDuration == 0 || len(legDurations) == 0 {
+		transfers := max(vehicleCount-1, 0)
+		return m.icons.filledDot + strings.Repeat(m.icons.horizLine+m.icons.horizLine+m.icons.hollowDot, transfers) + m.icons.horizLine + m.icons.horizLine + m.icons.filledDot
 	}
 
 	var sb strings.Builder
 	sb.WriteString(m.icons.filledDot)
 
 	usedChars := 0
-	for i, secDur := range sectionDurations {
+	for i, legDur := range legDurations {
 		var lineChars int
-		if i == len(sectionDurations)-1 {
-			// Give the last section whatever rounding remainder is left so the line ends flush.
+		if i == len(legDurations)-1 {
+			// Give the last leg whatever rounding remainder is left so the line ends flush.
 			lineChars = totalWidth - usedChars
 		} else {
-			proportion := float64(secDur) / float64(totalSectionDuration)
+			proportion := float64(legDur) / float64(totalLegDuration)
 			lineChars = int(proportion*float64(totalWidth) + 0.5)
 		}
 		lineChars = max(lineChars, 1)
 		usedChars += lineChars
 
 		sb.WriteString(strings.Repeat(m.icons.horizLine, lineChars))
-		if i < len(sectionDurations)-1 {
+		if i < len(legDurations)-1 {
 			sb.WriteString(m.icons.hollowDot)
 		} else {
 			sb.WriteString(m.icons.filledDot)
