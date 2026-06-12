@@ -15,6 +15,10 @@ local linters = new Mapping<String, Step> {
   }
   ["go-fumpt"] = Builtins.go_fumpt
   ["go-imports"] = Builtins.go_imports
+  ["go-test"] {
+    glob = List("**/*.go", "go.mod", "go.sum")
+    check = "go test ./..."
+  }
   ["golangci-lint"] = Builtins.golangci_lint
   ["trailing-whitespace"] = Builtins.trailing_whitespace
   ["taplo-format"] = Builtins.taplo_format
