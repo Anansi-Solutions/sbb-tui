@@ -154,6 +154,17 @@ type Leg struct {
 // IsWalk reports whether the leg is a walking transfer.
 func (l Leg) IsWalk() bool { return l.Type == "walk" }
 
+// DisplayLine returns the line label the way SBB displays it. Trains
+// already arrive combined ("S13", "IC 1") and stay as-is; for other
+// modes the API's line is the bare number, so the category is prefixed:
+// buses "B 33", trams "T 51", ships "BAT 3600".
+func (l Leg) DisplayLine() string {
+	if l.Category != "" && l.Line != "" && l.Line == l.LineNumber {
+		return l.Category + " " + l.Line
+	}
+	return l.Line
+}
+
 // OperatorName returns the operator with the API's stray internal
 // whitespace collapsed (e.g. "VBZ    F" -> "VBZ F").
 func (l Leg) OperatorName() string {
