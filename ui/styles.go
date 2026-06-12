@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/muesli/termenv"
@@ -114,6 +116,37 @@ func newStyles(theme config.Theme) styles {
 		background:      bg,
 		backgroundKnown: bgKnown,
 	}
+}
+
+// lineStyle returns the badge style for a transport line, using the
+// official line colors when the API provides them and falling back to
+// the theme's badge colors otherwise.
+func (s styles) lineStyle(fg, bg string) lipgloss.Style {
+	style := s.vehicleModel
+	if c := normalizeHex(bg); c != "" {
+		style = style.Background(lipgloss.Color(c))
+	}
+	if c := normalizeHex(fg); c != "" {
+		style = style.Foreground(lipgloss.Color(c))
+	}
+	return style
+}
+
+// normalizeHex turns the API's bare hex colors ("f00", "8e224d") into
+// "#"-prefixed form, returning "" when the value is not a valid hex color.
+func normalizeHex(s string) string {
+	s = strings.TrimPrefix(strings.TrimSpace(s), "#")
+	if len(s) != 3 && len(s) != 6 {
+		return ""
+	}
+	for _, r := range s {
+		switch {
+		case r >= '0' && r <= '9', r >= 'a' && r <= 'f', r >= 'A' && r <= 'F':
+		default:
+			return ""
+		}
+	}
+	return "#" + s
 }
 
 // detectBackground returns the terminal's background color and whether the
