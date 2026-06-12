@@ -106,3 +106,41 @@ func fixtureConnection() model.Connection {
 		},
 	}
 }
+
+// fixtureGondolaConnection mirrors the real Charmey -> Vounetse response:
+// a gondola leg with no line label, colors or occupancy, plus the bare
+// arrival node. This shape used to render as a malformed connection.
+func fixtureGondolaConnection() model.Connection {
+	return model.Connection{
+		From:      "Charmey (Gruyère) (télécabine)",
+		To:        "Vounetse",
+		Departure: ts(17, 13),
+		Arrival:   ts(17, 28),
+		Duration:  900,
+		Legs: []model.Leg{
+			{
+				Name:        "Charmey (Gruyère) (télécabine)",
+				Departure:   ts(17, 13),
+				Type:        "gondola",
+				TypeName:    "Gondelbahn",
+				Category:    "GB",
+				LineNumber:  "2042",
+				Terminal:    "Vounetse",
+				Operator:    "TCSA",
+				RunningTime: 900,
+				Lat:         46.618687,
+				Lon:         7.168966,
+				Exit: &model.Exit{
+					Name:    "Vounetse",
+					Arrival: ts(17, 28),
+					Lat:     46.626013,
+					Lon:     7.207122,
+				},
+			},
+			{
+				Name:    "Vounetse",
+				Arrival: ts(17, 28),
+			},
+		},
+	}
+}

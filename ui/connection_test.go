@@ -159,6 +159,28 @@ func TestRenderSimpleConnection(t *testing.T) {
 	}
 }
 
+func TestRenderGondolaConnection(t *testing.T) {
+	m := newTestModel()
+	c := fixtureGondolaConnection()
+
+	out := m.renderSimpleConnection(c, 0, 60)
+	if strings.Contains(out, "unavailable") {
+		t.Fatalf("gondola connection rendered as malformed:\n%s", out)
+	}
+	for _, want := range []string{"GB 2042", "TCSA", "Vounetse", "17:13", "17:28", "15 min"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("gondola card missing %q:\n%s", want, out)
+		}
+	}
+
+	detail := strings.Join(m.buildDetailLines(c, 80), "\n")
+	for _, want := range []string{"GB 2042", "Charmey", "→ Vounetse"} {
+		if !strings.Contains(detail, want) {
+			t.Errorf("gondola detail missing %q:\n%s", want, detail)
+		}
+	}
+}
+
 func TestRenderSimpleConnectionMalformed(t *testing.T) {
 	m := newTestModel()
 	c := model.Connection{Legs: []model.Leg{{Type: "walk"}}}

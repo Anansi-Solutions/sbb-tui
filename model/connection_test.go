@@ -122,6 +122,12 @@ func TestLegKindHelpers(t *testing.T) {
 		t.Error("vehicle leg misclassified")
 	}
 
+	// Gondolas/funiculars have no line label but are still vehicles.
+	gondola := Leg{Type: "gondola", Category: "GB", LineNumber: "2042"}
+	if gondola.IsWalk() || !gondola.IsVehicle() {
+		t.Error("gondola leg misclassified")
+	}
+
 	arrivalNode := Leg{Name: "St. Gallen"}
 	if arrivalNode.IsWalk() || arrivalNode.IsVehicle() {
 		t.Error("bare arrival node misclassified")
@@ -140,6 +146,9 @@ func TestDisplayLine(t *testing.T) {
 		{"sbahn stays combined", Leg{Line: "S13", Category: "S", LineNumber: "13"}, "S13"},
 		{"ic stays combined", Leg{Line: "IC 1", Category: "IC", LineNumber: "1"}, "IC 1"},
 		{"no category", Leg{Line: "17", LineNumber: "17"}, "17"},
+		{"gondola without line", Leg{Category: "GB", LineNumber: "2042", TypeName: "Gondelbahn"}, "GB 2042"},
+		{"category only", Leg{Category: "FUN"}, "FUN"},
+		{"type name fallback", Leg{TypeName: "Gondelbahn"}, "Gondelbahn"},
 		{"empty", Leg{}, ""},
 	}
 

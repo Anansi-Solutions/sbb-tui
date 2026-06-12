@@ -157,12 +157,24 @@ func (l Leg) IsWalk() bool { return l.Type == "walk" }
 // DisplayLine returns the line label the way SBB displays it. Trains
 // already arrive combined ("S13", "IC 1") and stay as-is; for other
 // modes the API's line is the bare number, so the category is prefixed:
-// buses "B 33", trams "T 51", ships "BAT 3600".
+// buses "B 33", trams "T 51", ships "BAT 3600". Modes without a line
+// label (gondolas, funiculars, ...) fall back to category and number
+// ("GB 2042"), then to the human-readable type name.
 func (l Leg) DisplayLine() string {
-	if l.Category != "" && l.Line != "" && l.Line == l.LineNumber {
+	switch {
+	case l.Line == "":
+		// No line label: build one from category and number, falling
+		// back to the human-readable type name.
+		if label := strings.TrimSpace(l.Category + " " + l.LineNumber); label != "" {
+			return label
+		}
+		return l.TypeName
+	case l.Category != "" && l.Line == l.LineNumber:
+		// Bare line numbers (bus "33", tram "51") get their category.
 		return l.Category + " " + l.Line
+	default:
+		return l.Line
 	}
-	return l.Line
 }
 
 // OperatorName returns the operator with the API's stray internal
@@ -171,8 +183,11 @@ func (l Leg) OperatorName() string {
 	return strings.Join(strings.Fields(l.Operator), " ")
 }
 
-// IsVehicle reports whether the leg is ridden on a transport line.
-func (l Leg) IsVehicle() bool { return l.Line != "" && !l.IsWalk() }
+// IsVehicle reports whether the leg is ridden on a transport vehicle.
+// Some modes (gondolas, funiculars, ...) carry no line label, so the
+// leg type is the discriminator: vehicle legs always have one, while
+// the final arrival node of a connection has none.
+func (l Leg) IsVehicle() bool { return l.Type != "" && !l.IsWalk() }
 
 // Connection is one full route returned by the API.
 type Connection struct {
