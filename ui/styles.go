@@ -94,7 +94,8 @@ func newStyles(theme config.Theme) styles {
 			Foreground(themeColor(theme.Warning)).
 			Bold(true),
 		occupancyOff: lipgloss.NewStyle().
-			Foreground(themeColor(theme.TextMuted)),
+			Foreground(themeColor(theme.TextMuted)).
+			Faint(true),
 		vehicleIcon: lipgloss.NewStyle().
 			Background(themeColor(theme.BadgeVehicleBg)).
 			Foreground(themeColor(theme.BadgeVehicleFg)),
